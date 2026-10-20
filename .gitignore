@@ -1,0 +1,38 @@
+## .NET Build artifacts
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+## Visual Studio & VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+*.userosscache
+*.sln.docstates
+
+## Temporary & Log files
+*.log
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+## Test & Coverage results
+TestResults/
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+
+## Database local files
+*.mdf
+*.ldf
+*.ndf
+
+## Local environment overrides
+appsettings.Local.json
+appsettings.Development.json

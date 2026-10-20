@@ -1,107 +1,168 @@
-# 🏺 Backend RESTful Web API - Hệ Thống Quản Lý Bán Đồ Gốm Sứ
-
-![.NET Version](https://img.shields.io/badge/.NET-8.0%2F9.0-512BD4?logo=dotnet)
-![Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture%20%2F%20Ports%20%26%20Adapters-blue)
-![Database](https://img.shields.io/badge/Database-SQL%20Server%202022-CC292B?logo=microsoftsqlserver)
-![Redis Cache](https://img.shields.io/badge/Redis%20Seam-localhost%3A6379-DC382D?logo=redis)
-![API Standard](https://img.shields.io/badge/API-ApiResponse%3CT%3E%20Standard-orange)
-
-Dự án Backend RESTful Web API chuyên trách xử lý toàn bộ logic nghiệp vụ, quản lý cơ sở dữ liệu gốm sứ và cung cấp Endpoints JSON tiêu chuẩn cho ứng dụng Frontend ReactJS SPA ([`d:\Fe_gomsu_nhom5`](file:///d:/Fe_gomsu_nhom5)).
+# 🏺 HƯỚNG DẪN CÀI ĐẶT & KHỞI CHẠY BACKEND (.NET 8 & SQL SERVER)
+> **Dự án**: Hệ Thống Quản Lý Bán Đồ Gốm Sứ Bát Tràng (Nhóm 5)  
+> **Backend RESTful Web API**: ASP.NET Core 8.0 LTS + Entity Framework Core 8 + SQL Server
 
 ---
 
-## 🚀 1. Lộ Trình Phát Triển Tính Năng (3 Giai Đoạn)
-
-### 🟢 Giai Đoạn 1: Core E-Commerce & Management (Hoàn Thành)
-- [x] **Full-Text Search & Filter API**: Tìm kiếm sản phẩm theo tên (Full-text match) & Lọc đa tiêu chí (Loại, Men, Kích thước, Màu sắc, Giá).
-- [x] **Essential Fields DTOs**: Tối ưu Payload API chỉ trả về các trường dữ liệu thực sự cần thiết cho UI.
-- [x] **Product Catalog & Detail**: API lấy danh sách và chi tiết mặt hàng gốm sứ.
-- [x] **Admin Product CRUD**: Thêm mới (`POST`), Cập nhật (`PUT`), Xóa (`DELETE`) sản phẩm đồ gốm sứ.
-
-### 🟡 Giai Đoạn 2: Giỏ Hàng, Đơn Hàng & Chat Tư Vấn (Hoàn Thành)
-- [x] **Giỏ hàng (Cart)**: Quản lý giỏ hàng `GioHang` (DTOs & Service API).
-- [x] **Đặt hàng & Lịch sử đơn hàng**: Xử lý tạo đơn `HoaDonBan` (Sequential Auto ID `HDB...`) và tra cứu trạng thái đơn hàng đã đặt.
-- [x] **Khung Chat Tư Vấn Trực Tuyến**: Customer Floating Chat Widget & Admin Live Support Chat Panel (`/api/v1/chat`).
-
-### 🔵 Giai Đoạn 3: Dashboard Doanh Số & Redis Cache Seam (Hoàn Thành)
-- [x] **Dashboard Thống Kê**: Báo cáo doanh số theo ngày/tháng, top sản phẩm bán chạy (`GET /api/v1/thong-ke/doanh-so`).
-- [x] **Redis Caching Seam**: Cổng `ICacheService` kết nối Redis tại `localhost:6379` với tiền tố bắt buộc `GomSuNhom5:` (In-Memory fallback hiện tại).
+## 📌 TÓM TẮT NHANH CÁCH CHẠY (DÀNH CHO NGƯỜI ĐÃ CÓ MÔI TRƯỜNG)
+1. Cấu hình chuỗi kết nối SQL Server của bạn trong [`appsettings.json`](file:///d:/web_gomsu_nhom5/appsettings.json).
+2. Mở Terminal tại thư mục này và chạy lệnh:
+   ```powershell
+   dotnet run --urls "http://localhost:5000"
+   ```
+👉 **Cơ sở dữ liệu (Database + 21 Bảng + Dữ liệu mẫu + Tài khoản test) sẽ TỰ ĐỘNG SINH 100%**.  
+👉 Kiểm tra API tại: **[http://localhost:5000/swagger](http://localhost:5000/swagger)**
 
 ---
 
-## ⚡ 2. Cấu Hình Redis Cache Seam (`localhost:6379`) & Key Prefix
+## 🛠️ HƯỚNG DẪN CÀI ĐẶT CHI TIẾT TỪNG BƯỚC TỪ A - Z (CHO MÁY MỚI)
 
-Hệ thống đã thiết kế cổng trừu tượng **Cache Seam** (`ICacheService`) ở tầng `Application`:
-- **Redis Connection Endpoint**: `localhost:6379`
-- **Tên Tiền Tố Key (Key Prefix)**: `GomSuNhom5:` (Ví dụ: `GomSuNhom5:Product:HH001`, `GomSuNhom5:Categories`) nhằm đảm bảo **100% không bị trùng lặp key** với các dự án khác trên cùng Redis Server.
-- **Chế độ hiện tại**: Tự động dùng `InMemoryCacheService` (.NET `IMemoryCache`) để phát triển không phụ thuộc môi trường.
-- **Khi kích hoạt Redis**: Đổi `RedisConfig:Enabled = true` trong [`appsettings.json`](file:///d:/web_gomsu_nhom5/appsettings.json), hệ thống sẽ chuyển sang `RedisCacheService` với Key Prefix `GomSuNhom5:` mà không thay đổi bất kỳ code nghiệp vụ nào!
+### BƯỚC 1: Cài Đặt Các Phần Mềm Môi Trường Bắt Buộc
+
+#### 1. Cài đặt .NET 8.0 SDK (Bắt buộc)
+- **Tải từ trang chủ Microsoft**: [https://dotnet.microsoft.com/en-us/download/dotnet/8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+- Chọn bản **.NET SDK x64** cho Windows (hoặc macOS/Linux tương ứng).
+- Tải về và cài đặt theo hướng dẫn mặc định của bộ cài.
+- **Kiểm tra sau khi cài đặt**: Mở PowerShell hoặc CMD gõ lệnh:
+  ```powershell
+  dotnet --version
+  ```
+  *(Nếu màn hình hiển thị phiên bản bắt đầu bằng `8.0.xxx` hoặc `9.0.xxx` là thành công!)*
+
+#### 2. Cài đặt Microsoft SQL Server (Bắt buộc)
+- **Tải SQL Server (Bản Developer hoặc Express miễn phí)**: [https://www.microsoft.com/en-us/sql-server/sql-server-downloads](https://www.microsoft.com/en-us/sql-server/sql-server-downloads)
+- Tiến hành cài đặt chọn kiểu **Basic** hoặc **Custom**.
+- **Tải thêm công cụ quản lý trực quan SSMS (SQL Server Management Studio)**: [https://aka.ms/ssmsfullsetup](https://aka.ms/ssmsfullsetup) để dễ dàng xem bảng và dữ liệu.
 
 ---
 
-## 📐 3. Kiến Trúc Hệ Thống (Clean Architecture / Ports & Adapters)
+### BƯỚC 2: Cấu Hình Chuỗi Kết Nối Cơ Sở Dữ Liệu (`appsettings.json`)
 
-```text
-d:\web_gomsu_nhom5\
-├── QuanLyBanDoGomSu.sql            # Script DDL SQL Server 2022 (21 Bảng CSDL)
-├── appsettings.json                # ConnectionString & RedisConfig (localhost:6379)
-├── README.md                       # Tài liệu tổng quan Backend & Roadmap
-├── API_DOCUMENTATION.md            # Tài liệu danh mục API Endpoints & Payload mẫu
-└── src/
-    ├── Domain/                     # Core Entities (DanhMucHangHoa, LoaiMen, HoaDonBan...)
-    ├── Application/                # Use Cases, DTOs Essential Fields & Port Interfaces
-    │   ├── DTOs/                   # (DanhMucHangHoaDto, ProductFilterRequest, OrderDto...)
-    │   ├── Port/In/                # (IDanhMucHangHoaService, IOrderService, IChatService...)
-    │   └── Port/Out/               # (IDanhMucHangHoaRepository, ICacheService...)
-    ├── Exception/                  # Custom Exceptions & Chuẩn ApiResponse<T>
-    ├── Infrastructure/             # EF Core DbContext & Redis/InMemory Cache Adapter
-    └── Presentation/               # Web API Controllers (HangHoa, DonHang, Chat, ThongKe)
+1. Mở file [`appsettings.json`](file:///d:/web_gomsu_nhom5/appsettings.json) trong thư mục dự án bằng VS Code, Visual Studio hoặc Notepad.
+2. Tìm đến đoạn `"ConnectionStrings"`:
+
+#### 👉 Trường hợp phổ biến nhất: Kết nối bằng Windows Authentication (Không cần mật khẩu)
+Nếu máy bạn cài SQL Server mặc định:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=QuanLyBanDoGomSu;Trusted_Connection=True;TrustServerCertificate=True;"
+  }
+}
+```
+*(Nếu máy bạn đặt tên Instance là `SQLEXPRESS`, hãy đổi `Server=localhost\\SQLEXPRESS` hoặc `Server=.\\SQLEXPRESS`)*.
+
+#### 👉 Trường hợp 2: Kết nối bằng tài khoản `sa` và mật khẩu
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=QuanLyBanDoGomSu;User Id=sa;Password=MậtKhẩuCủaBạn;TrustServerCertificate=True;"
+  }
+}
+```
+
+#### 👉 Trường hợp 3: Kết nối bằng SQL Server LocalDB (Có sẵn nếu bạn đã cài Visual Studio)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=QuanLyBanDoGomSu;Trusted_Connection=True;TrustServerCertificate=True;"
+  }
+}
 ```
 
 ---
 
-## 🗄️ 4. Danh Sách 21 Bảng Cơ Sở Dữ Liệu SQL Server (`WebQuanLyBanDoGomSu`)
+### BƯỚC 3: Khởi Chạy Ứng Dụng (CSDL Tự Sinh 100%)
 
-| STT | Tên Bảng SQL | Mô Tả Nghiệp Vụ Quản Lý |
-| :-: | :--- | :--- |
-| 1 | `DanhMucHangHoa` | Thông tin sản phẩm gốm sứ (mã, tên, loại men, kích thước, đơn giá...) |
-| 2 | `Loai` | Phân loại sản phẩm (Bình hoa, Ấm chén, Lục bình, Đĩa trang trí...) |
-| 3 | `KichThuoc` | Kích thước sản phẩm (Chiều cao, đường kính) |
-| 4 | `CongDung` | Công dụng đồ gốm (Trang trí, Đồ thờ, Dùng hàng ngày...) |
-| 5 | `LoaiMen` | Loại men gốm (Men rạn, Men lam, Men ngọc, Men hoả biến...) |
-| 6 | `HinhKhoi` | Hình khối sản phẩm (Tròn, Vuông, Hình trụ, Hình cầu...) |
-| 7 | `MauSac` | Màu sắc chủ đạo sản phẩm gốm sứ |
-| 8 | `NuocSanXuat` | Nguồn gốc sản xuất (Việt Nam - Bát Tràng, Chu Đậu, Giang Tây...) |
-| 9 | `HoaVan` | Họa tiết khắc hoa văn (Sơn thủy, Tùng cúc trúc mai, Rồng phụng...) |
-| 10 | `TaiKhoan` | Tài khoản đăng nhập hệ thống (BCrypt Password, Role, Status) |
-| 11 | `NhanVien` | Thông tin nhân viên quản lý & bán hàng |
-| 12 | `KhachHang` | Thông tin khách hàng mua đồ gốm sứ |
-| 13 | `NhaCungCap` | Nhà cung cấp nguồn gốm sứ |
-| 14 | `HoaDonBan` | Hóa đơn đơn hàng bán cho khách hàng |
-| 15 | `ChiTietHoaDonBan` | Chi tiết mặt hàng & số lượng trong hóa đơn bán |
-| 16 | `HoaDonNhap` | Hóa đơn nhập hàng từ nhà cung cấp |
-| 17 | `ChiTietHoaDonNhap` | Chi tiết mặt hàng nhập trong hóa đơn nhập |
-| 18 | `CongViec` | Chức vụ và danh mục công việc nhân viên |
-| 19 | `PhanQuyen` | Danh mục quyền hạn quản trị hệ thống |
-| 20 | `GioHang` | Thông tin giỏ hàng lưu trữ người dùng |
-| 21 | `ChiTietGioHang` | Chi tiết sản phẩm gốm sứ có trong giỏ hàng |
+> ⚠️ **ĐẶC BIỆT LƯU Ý**: Bạn **KHÔNG CẦN** tự tạo Database hay chạy câu lệnh SQL nào trước!  
+> Ứng dụng đã tích hợp sẵn cơ chế **Auto-Migration & Data Seeder** (`DatabaseInitializer.cs`).
 
-> ⚠️ **Quy tắc ORM**: CSDL được quản lý `100%` bằng script SQL DDL ([`QuanLyBanDoGomSu.sql`](file:///d:/web_gomsu_nhom5/QuanLyBanDoGomSu.sql)). Cấu hình `OrmConfig:DdlAuto = "none"`, không tự động sinh schema.
-
----
-
-## 🛠️ 5. Hướng Dẫn Khởi Chạy
-
-1. **Khởi Tạo CSDL**: Chạy script [`QuanLyBanDoGomSu.sql`](file:///d:/web_gomsu_nhom5/QuanLyBanDoGomSu.sql) trong SQL Server 2022.
-2. **Cấu Hình Chuỗi Kết Nối & Redis**: Kiểm tra ConnectionString & Redis Endpoint (`localhost:6379`) trong [`appsettings.json`](file:///d:/web_gomsu_nhom5/appsettings.json).
-3. **Khởi Chạy API**:
-   ```bash
+1. Mở cửa sổ **PowerShell** hoặc **Command Prompt** (CMD).
+2. Di chuyển đến thư mục dự án Backend:
+   ```powershell
    cd d:\web_gomsu_nhom5
-   dotnet run
+   ```
+3. Chạy lệnh phục hồi các gói thư viện:
+   ```powershell
+   dotnet restore
+   ```
+4. Chạy lệnh biên dịch mã nguồn:
+   ```powershell
+   dotnet build
+   ```
+   *(Đảm bảo kết quả trả về `0 Warning(s), 0 Error(s)`)*.
+5. Chạy ứng dụng Backend Web API:
+   ```powershell
+   dotnet run --urls "http://localhost:5000"
    ```
 
+Khi màn hình xuất hiện các thông báo sau là hệ thống đã hoạt động hoàn tất:
+```text
+[DatabaseInitializer] Co so du lieu da san sang voi 20 mat hang mau va 2 tai khoan test mac dinh!
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5000
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+```
+
+**Những việc hệ thống đã tự động làm cho bạn trong tích tắc:**
+1. Tự tạo Cơ sở dữ liệu tên là `QuanLyBanDoGomSu` trên SQL Server của bạn.
+2. Tự sinh toàn bộ **21 Bảng dữ liệu** với đầy đủ khóa chính, khóa ngoại, quan hệ 1-N, N-N.
+3. Tự nạp dữ liệu danh mục: 6 Loại hàng, 5 Loại men Bát Tràng (Men lam, Men rạn...), 4 Kích thước, Màu sắc, Hoa văn, Hình khối, Công dụng.
+4. Tự nạp **20 sản phẩm gốm sứ Bát Tràng mẫu** với giá bán, hình ảnh, mô tả chi tiết, số lượng tồn kho.
+5. Tự nạp sẵn **2 Tài khoản kiểm thử** (đã mã hóa BCrypt).
+
 ---
 
-## 📖 6. Tài Liệu REST API Chi Tiết
+### BƯỚC 4: Kiểm Tra Hoạt Động Của API (Swagger UI)
 
-- [📖 API_DOCUMENTATION.md](file:///d:/web_gomsu_nhom5/API_DOCUMENTATION.md)
+Mở trình duyệt web bất kỳ (Chrome, Edge, Cốc Cốc) và truy cập:
+👉 **[http://localhost:5000/swagger](http://localhost:5000/swagger)**
+
+Tại đây bạn sẽ thấy giao diện Swagger UI liệt kê đầy đủ toàn bộ API của hệ thống:
+- `GET /api/v1/hang-hoa`: Lấy danh sách gốm sứ (tìm kiếm, lọc giá, loại men...).
+- `GET /api/v1/hang-hoa/{id}`: Xem chi tiết 1 sản phẩm.
+- `POST /api/v1/auth/login`: Đăng nhập hệ thống.
+- `POST /api/v1/don-hang`: Tạo đơn đặt hàng.
+- `GET /api/v1/don-hang/tra-cuu?soDienThoai=...`: Tra cứu đơn hàng theo SĐT.
+- `GET /api/v1/thong-ke/doanh-so`: Báo cáo doanh số và top sản phẩm bán chạy.
+
+---
+
+## 🔑 TÀI KHOẢN ĐĂNG NHẬP KIỂM THỬ (ĐÃ NẠP SẴN TRONG DB)
+
+| Loại Tài Khoản | Tên Đăng Nhập | Mật Khẩu | Quyền Hạn (Role) | Chức Năng |
+| :--- | :--- | :--- | :---: | :--- |
+| **Quản Trị Viên (Admin)** | `admin` | `admin123` | `ADMIN` | Quản trị toàn bộ hệ thống: Xem dashboard doanh thu, Thêm/Sửa/Xóa gốm sứ, duyệt trạng thái đơn hàng, chat trực tiếp với khách. |
+| **Khách Hàng (Customer)** | `user` | `user123` | `KH` | Mua sắm gốm sứ, thêm giỏ hàng, đặt hàng thanh toán COD/QR, xem lịch sử mua cá nhân. |
+
+---
+
+## 📂 PHƯƠNG ÁN PHỤ: CHẠY SCRIPT SQL THỦ CÔNG (NẾU GIẢNG VIÊN YÊU CẦU)
+Nếu người chấm bài muốn thẩm định file script SQL DDL thủ công:
+1. Mở **SQL Server Management Studio (SSMS)** kết nối vào SQL Server.
+2. Mở file script có sẵn trong dự án: [`QuanLyBanDoGomSu.sql`](file:///d:/web_gomsu_nhom5/QuanLyBanDoGomSu.sql).
+3. Bấm nút **Execute** (hoặc phím `F5`) để chạy script tạo DB và bảng.
+4. Mở Terminal chạy `dotnet run --urls "http://localhost:5000"`, hệ thống sẽ tự động nhận diện và nạp tiếp dữ liệu sản phẩm mẫu nếu bảng đang trống.
+
+---
+
+## ❓ CÁC LỖI THƯỜNG GẶP VÀ CÁCH KHẮC PHỤC NHANH
+
+1. **Lỗi `Cannot open database "QuanLyBanDoGomSu"` hoặc lỗi kết nối SQL Server**:
+   - **Cách sửa**: Kiểm tra xem dịch vụ SQL Server có đang chạy không: Nhấn phím `Windows + R`, gõ `services.msc`, tìm dịch vụ `SQL Server (MSSQLSERVER)` hoặc `SQL Server (SQLEXPRESS)` và bấm chuột phải chọn **Start** (Khởi động).
+2. **Lỗi `The process cannot access the file ... QuanLyBanDoGomSu.exe` khi build**:
+   - **Cách sửa**: Do ứng dụng đang chạy nền ở một cửa sổ khác. Hãy tắt cửa sổ đó hoặc chạy lệnh sau trong PowerShell để tắt tiến trình:
+     ```powershell
+     Stop-Process -Name "QuanLyBanDoGomSu" -Force -ErrorAction SilentlyContinue
+     ```
+3. **Cổng 5000 bị ứng dụng khác chiếm**:
+   - **Cách sửa**: Chạy trên cổng khác, ví dụ cổng 5001:
+     ```powershell
+     dotnet run --urls "http://localhost:5001"
+     ```
+     *(Sau đó nhớ chỉnh lại cổng Backend tương ứng trong Frontend)*.
+
+---
+
+

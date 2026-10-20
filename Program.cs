@@ -80,6 +80,22 @@ builder.Services.AddControllers(options =>
 
 var app = builder.Build();
 
+// 7. Tự động kiểm tra, tạo CSDL và nạp dữ liệu mẫu + tài khoản test khi ứng dụng khởi chạy
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<QuanLyBanDoGomSuDbContext>();
+        DatabaseInitializer.Initialize(context);
+    }
+    catch (System.Exception ex)
+    {
+        var logger = services.GetService<Microsoft.Extensions.Logging.ILogger<Program>>();
+        logger?.LogWarning(ex, "Lưu ý khi tự động kết nối/khởi tạo CSDL: {Message}", ex.Message);
+    }
+}
+
 app.UseCors("AllowReactApp");
 app.UseAuthorization();
 
